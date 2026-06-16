@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movie Quiz App</title>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, hsl(210, 50%, 20%), hsl(210, 50%, 30%));
+            color: #fff;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 20px;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            width: 90%;
+            max-width: 600px;
+            text-align: center;
+        }
+        h1 {
+            margin-bottom: 20px;
+        }
+        .question {
+            font-size: 1.5em;
+            margin: 20px 0;
+        }
+        .options {
+            list-style: none;
+            padding: 0;
+        }
+        .option {
+            background: hsl(210, 50%, 40%);
+            border-radius: 12px;
+            padding: 15px;
+            margin: 10px 0;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .option:hover {
+            transform: scale(1.02);
+        }
+        .correct {
+            background: hsl(120, 70%, 40%);
+        }
+        .incorrect {
+            background: hsl(0, 70%, 40%);
+        }
+        .progress {
+            height: 10px;
+            background: hsl(210, 50%, 60%);
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .progress-bar {
+            height: 100%;
+            background: hsl(120, 70%, 40%);
+            width: 0;
+            border-radius: 5px;
+            transition: width 0.3s;
+        }
+        .score {
+            font-size: 1.2em;
+            margin: 20px 0;
+        }
+        .button {
+            background: hsl(210, 50%, 50%);
+            border: none;
+            border-radius: 12px;
+            padding: 10px 20px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .button:hover {
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Movie Quiz</h1>
+        <div class="question"></div>
+        <ul class="options"></ul>
+        <div class="progress"><div class="progress-bar"></div></div>
+        <div class="score"></div>
+        <button class="button" id="restart" style="display: none;">Restart Quiz</button>
+    </div>
+    <script>
+        const questions = [
+            { question: 'Who directed the movie Inception?', options: ['Christopher Nolan', 'Steven Spielberg', 'Martin Scorsese', 'James Cameron'], answer: 0 },
+            { question: 'What is the highest-grossing film of all time?', options: ['Avatar', 'Titanic', 'Star Wars: The Force Awakens', 'Avengers: Endgame'], answer: 3 },
+            { question: 'Which movie features the character Jack Sparrow?', options: ['The Lord of the Rings', 'Pirates of the Caribbean', 'Harry Potter', 'Star Wars'], answer: 1 },
+            { question: 'What year was The Matrix released?', options: ['1999', '2000', '1997', '2001'], answer: 0 },
+            { question: 'Who played the Joker in The Dark Knight?', options: ['Jared Leto', 'Heath Ledger', 'Jack Nicholson', 'Joaquin Phoenix'], answer: 1 }
+        ];
+
+        let currentQuestionIndex = 0;
+        let score = 0;
+        const totalQuestions = questions.length;
+        const questionElement = document.querySelector('.question');
+        const optionsElement = document.querySelector('.options');
+        const scoreElement = document.querySelector('.score');
+        const progressBar = document.querySelector('.progress-bar');
+        const restartButton = document.getElementById('restart');
+
+        function loadQuestion() {
+            const currentQuestion = questions[currentQuestionIndex];
+            questionElement.innerText = currentQuestion.question;
+            optionsElement.innerHTML = '';
+            currentQuestion.options.forEach((option, index) => {
+                const li = document.createElement('li');
+                li.innerText = option;
+                li.classList.add('option');
+                li.addEventListener('click', () => selectOption(index));
+                optionsElement.appendChild(li);
+            });
+            updateProgress();
+        }
+
+        function selectOption(index) {
+            const currentQuestion = questions[currentQuestionIndex];
+            const options = document.querySelectorAll('.option');
+            if (index === currentQuestion.answer) {
+                options[index].classList.add('correct');
+                score++;
+                playSound('correct');
+            } else {
+                options[index].classList.add('incorrect');
+                playSound('incorrect');
+                options[currentQuestion.answer].classList.add('correct');
+            }
+            options.forEach(option => option.style.pointerEvents = 'none');
+            currentQuestionIndex++;
+            setTimeout(() => {
+                if (currentQuestionIndex < totalQuestions) {
+                    loadQuestion();
+                } else {
+                    showScore();
+                }
+            }, 1000);
+        }
+
+        function showScore() {
+            questionElement.innerText = 'Quiz Finished!';
+            optionsElement.innerHTML = '';
+            scoreElement.innerText = `Your score: ${score} / ${totalQuestions}`;
+            restartButton.style.display = 'block';
+            saveScore();
+        }
+
+        function updateProgress() {
+            const progress = ((currentQuestionIndex + 1) / totalQuestions) * 100;
+            progressBar.style.width = progress + '%';
+        }
+
+        function saveScore() {
+            const highScores = JSON.parse(localStorage.getItem('highScores')) || [];
+            highScores.push(score);
+            localStorage.setItem('highScores', JSON.stringify(highScores));
+        }
+
+        function playSound(type) {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            oscillator.type = 'square';
+            oscillator.frequency.setValueAtTime(type === 'correct' ? 440 : 220, audioContext.currentTime);
+            oscillator.connect(audioContext.destination);
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + 0.2);
+        }
+
+        restartButton.addEventListener('click', () => {
+            currentQuestionIndex = 0;
+            score = 0;
+            restartButton.style.display = 'none';
+            loadQuestion();
+        });
+
+        loadQuestion();
+    </script>
+</body>
+</html>
